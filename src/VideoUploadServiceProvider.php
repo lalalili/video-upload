@@ -2,10 +2,10 @@
 
 namespace Lalalili\VideoUpload;
 
-use Lalalili\VideoUpload\Services\VideoUploadService;
 use Lalalili\VideoUpload\Services\VideoAutoSyncService;
 use Lalalili\VideoUpload\Services\VideoPlaybackUrlService;
 use Lalalili\VideoUpload\Services\VideoTargetSyncService;
+use Lalalili\VideoUpload\Services\VideoUploadService;
 use Lalalili\VideoUpload\Services\VideoWebhookService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;

@@ -3,7 +3,6 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Illuminate\Database\Eloquent\Model;
-use Lalalili\VideoUpload\Models\Video;
 
 class VideoTargetSyncService
 {
@@ -11,20 +10,20 @@ class VideoTargetSyncService
      * @var array<string, string>
      */
     private const DEFAULT_FIELD_MAP = [
-        'video_id'          => 'id',
-        'provider'          => 'provider',
+        'video_id' => 'id',
+        'provider' => 'provider',
         'provider_video_id' => 'provider_video_id',
-        'video_url'         => 'player_embed_url',
-        'thumbnail_url'     => 'thumbnail_url',
-        'duration'          => 'duration',
-        'provider_status'   => 'provider_status',
-        'transcode_status'  => 'transcode_status',
+        'video_url' => 'player_embed_url',
+        'thumbnail_url' => 'thumbnail_url',
+        'duration' => 'duration',
+        'provider_status' => 'provider_status',
+        'transcode_status' => 'transcode_status',
     ];
 
     /**
      * @param  array<string, string>|null  $fieldMap
      */
-    public function sync(Video $video, Model $target, ?array $fieldMap = null): Model
+    public function sync(Model $video, Model $target, ?array $fieldMap = null): Model
     {
         $attributes = $this->mappedAttributes($video, $target, $fieldMap ?? $this->configuredFieldMap());
 
@@ -37,7 +36,7 @@ class VideoTargetSyncService
         return $target->refresh();
     }
 
-    public function syncWhenReady(Video $video, Model $target, ?array $fieldMap = null): ?Model
+    public function syncWhenReady(Model $video, Model $target, ?array $fieldMap = null): ?Model
     {
         if (! $this->isReady($video)) {
             return null;
@@ -50,7 +49,7 @@ class VideoTargetSyncService
      * @param  array<string, string>  $fieldMap
      * @return array<string, mixed>
      */
-    private function mappedAttributes(Video $video, Model $target, array $fieldMap): array
+    private function mappedAttributes(Model $video, Model $target, array $fieldMap): array
     {
         $attributes = [];
 
@@ -83,7 +82,7 @@ class VideoTargetSyncService
         return $fieldMap === [] ? self::DEFAULT_FIELD_MAP : $fieldMap;
     }
 
-    private function isReady(Video $video): bool
+    private function isReady(Model $video): bool
     {
         return in_array((string) $video->provider_status, ['ready', 'complete', 'completed'], true)
             || in_array((string) $video->transcode_status, ['ready', 'complete', 'completed'], true);

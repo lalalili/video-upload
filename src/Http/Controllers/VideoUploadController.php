@@ -2,8 +2,9 @@
 
 namespace Lalalili\VideoUpload\Http\Controllers;
 
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Lalalili\VideoUpload\Models\Video;
@@ -19,7 +20,7 @@ class VideoUploadController
 
         $video = $webhooks->handle($provider, $request->all());
 
-        return response($video instanceof Video ? '1|OK' : '0|NOT_FOUND', $video instanceof Video ? 200 : 404)
+        return response($video instanceof Model ? '1|OK' : '0|NOT_FOUND', $video instanceof Model ? 200 : 404)
             ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
@@ -30,9 +31,9 @@ class VideoUploadController
 
         return response()->json([
             'provider_video_id' => $status->providerVideoId,
-            'ready'             => $status->isReady,
-            'status'            => $status->status,
-            'transcode_status'  => $status->transcodeStatus,
+            'ready' => $status->isReady,
+            'status' => $status->status,
+            'transcode_status' => $status->transcodeStatus,
         ]);
     }
 
@@ -50,12 +51,12 @@ class VideoUploadController
         return redirect()->away($url);
     }
 
-    private function resolveVideo(int|string $key): Video
+    private function resolveVideo(int|string $key): Model
     {
-        /** @var class-string<Video> $videoModel */
+        /** @var class-string<Model> $videoModel */
         $videoModel = config('video-upload.models.video', Video::class);
 
-        /** @var Video $video */
+        /** @var Model $video */
         $video = $videoModel::query()->findOrFail($key);
 
         return $video;

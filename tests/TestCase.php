@@ -2,10 +2,10 @@
 
 namespace Lalalili\VideoUpload\Tests;
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Lalalili\CourseCore\CourseCoreServiceProvider;
 use Lalalili\VideoUpload\VideoUploadServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
@@ -45,9 +45,9 @@ abstract class TestCase extends OrchestraTestCase
         config()->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         config()->set('database.default', 'testing');
         config()->set('database.connections.testing', [
-            'driver'   => 'sqlite',
+            'driver' => 'sqlite',
             'database' => ':memory:',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
         config()->set('course-core.default_video_platform', 'cloudflare_stream');
         config()->set('course-core.providers.cloudflare_stream.account_id', 'account-123');

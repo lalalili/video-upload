@@ -2,20 +2,19 @@
 
 namespace Lalalili\VideoUpload\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\Video;
 
 class VideoWebhookService
 {
-    public function __construct(private readonly VideoAutoSyncService $autoSync)
-    {
-    }
+    public function __construct(private readonly VideoAutoSyncService $autoSync) {}
 
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function handle(string $provider, array $payload): ?Video
+    public function handle(string $provider, array $payload): ?Model
     {
         $providerVideoId = $this->providerVideoId($payload);
 
@@ -23,16 +22,16 @@ class VideoWebhookService
             return null;
         }
 
-        /** @var class-string<Video> $videoModel */
+        /** @var class-string<Model> $videoModel */
         $videoModel = config('video-upload.models.video', Video::class);
 
-        /** @var Video|null $video */
+        /** @var Model|null $video */
         $video = $videoModel::query()
             ->where('provider', $provider)
             ->where('provider_video_id', $providerVideoId)
             ->first();
 
-        if (! $video instanceof Video) {
+        if (! $video instanceof Model) {
             return null;
         }
 
@@ -40,15 +39,15 @@ class VideoWebhookService
         $ready = $this->isReady($payload, $providerStatus);
 
         $video->update([
-            'provider_status'  => $providerStatus,
+            'provider_status' => $providerStatus,
             'transcode_status' => $providerStatus,
-            'duration'         => $this->secondsFromMilliseconds(data_get($payload, 'duration', data_get($payload, 'data.duration'))),
-            'thumbnail_url'    => $this->thumbnailUrl($provider, $providerVideoId, $payload),
+            'duration' => $this->secondsFromMilliseconds(data_get($payload, 'duration', data_get($payload, 'data.duration'))),
+            'thumbnail_url' => $this->thumbnailUrl($provider, $providerVideoId, $payload),
             'player_embed_url' => $this->playerUrl($provider, $providerVideoId, $payload),
-            'metadata'         => array_merge($video->metadata ?? [], [
+            'metadata' => array_merge($video->metadata ?? [], [
                 'webhook' => [
-                    'provider'    => $provider,
-                    'payload'     => Arr::except($payload, ['secret']),
+                    'provider' => $provider,
+                    'payload' => Arr::except($payload, ['secret']),
                     'received_at' => now()->toISOString(),
                 ],
             ]),

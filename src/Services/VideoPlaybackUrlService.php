@@ -2,12 +2,12 @@
 
 namespace Lalalili\VideoUpload\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
-use Lalalili\VideoUpload\Models\Video;
 
 class VideoPlaybackUrlService
 {
-    public function url(Video $video): ?string
+    public function url(Model $video): ?string
     {
         if ($this->signedPlaybackEnabled()) {
             return URL::temporarySignedRoute(
@@ -20,7 +20,7 @@ class VideoPlaybackUrlService
         return $video->player_embed_url;
     }
 
-    public function targetUrl(Video $video): ?string
+    public function targetUrl(Model $video): ?string
     {
         return $video->player_embed_url;
     }

@@ -2,6 +2,8 @@
 
 namespace Lalalili\VideoUpload\Services;
 
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Lalalili\CourseCore\Contracts\CourseVideoPlatformManager;
 use Lalalili\CourseCore\Data\CourseVideoStatus;
 use Lalalili\CourseCore\Data\CourseVideoUploadRequest;
@@ -15,12 +17,11 @@ class VideoUploadService
     public function __construct(
         private readonly CourseVideoPlatformManager $platformManager,
         private readonly VideoAutoSyncService $autoSync,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $context
-     * @return array{video: Video, upload_session: VideoUploadSession, provider_session: ProviderUploadSession}
+     * @return array{video: Model, upload_session: Model, provider_session: ProviderUploadSession}
      */
     public function createProviderDirectSession(
         CourseVideoUploadRequest $request,
@@ -36,79 +37,79 @@ class VideoUploadService
             throw new \RuntimeException("Video provider [{$provider}] does not support direct uploads.");
         }
 
-        /** @var class-string<Video> $videoModel */
+        /** @var class-string<Model> $videoModel */
         $videoModel = config('video-upload.models.video', Video::class);
-        /** @var class-string<VideoUploadSession> $sessionModel */
+        /** @var class-string<Model> $sessionModel */
         $sessionModel = config('video-upload.models.session', VideoUploadSession::class);
 
-        /** @var Video $video */
+        /** @var Model $video */
         $video = $videoModel::query()->create([
-            'provider'          => $provider,
+            'provider' => $provider,
             'provider_video_id' => $providerSession->providerVideoId,
-            'upload_strategy'   => $providerSession->strategy,
-            'provider_status'   => 'pending_upload',
-            'transcode_status'  => 'pending_upload',
-            'metadata'          => $this->videoMetadata($request->metadata, $providerSession->metadata, $context),
-            'title'             => $request->title ?? pathinfo($request->fileName, PATHINFO_FILENAME),
-            'description'       => $request->description,
-            'size'              => $request->fileSize,
-            'mime_type'         => $request->mimeType,
-            'folder_id'         => $request->folderId,
-            'course_id'         => $context['course_id'] ?? null,
+            'upload_strategy' => $providerSession->strategy,
+            'provider_status' => 'pending_upload',
+            'transcode_status' => 'pending_upload',
+            'metadata' => $this->videoMetadata($request->metadata, $providerSession->metadata, $context),
+            'title' => $request->title ?? pathinfo($request->fileName, PATHINFO_FILENAME),
+            'description' => $request->description,
+            'size' => $request->fileSize,
+            'mime_type' => $request->mimeType,
+            'folder_id' => $request->folderId,
+            'course_id' => $context['course_id'] ?? null,
             'course_chapter_id' => $context['course_chapter_id'] ?? null,
-            'company_id'        => $this->contextInt($context, 'company_id'),
-            'created_by'        => $this->creatorId($request->creator, $context),
-            'updated_by'        => $this->creatorId($request->creator, $context),
+            'company_id' => $this->contextInt($context, 'company_id'),
+            'created_by' => $this->creatorId($request->creator, $context),
+            'updated_by' => $this->creatorId($request->creator, $context),
         ]);
 
-        /** @var VideoUploadSession $session */
+        /** @var Model $session */
         $session = $sessionModel::query()->create([
-            'video_id'           => $video->getKey(),
-            'folder_id'          => $request->folderId,
-            'course_id'          => $context['course_id'] ?? null,
-            'course_chapter_id'  => $context['course_chapter_id'] ?? null,
-            'company_id'         => $this->contextInt($context, 'company_id'),
-            'created_by'         => $this->creatorId($request->creator, $context),
-            'source'             => $context['source'] ?? null,
-            'provider'           => $provider,
-            'strategy'           => $providerSession->strategy,
-            'status'             => VideoUploadSessionStatus::Created->value,
+            'video_id' => $video->getKey(),
+            'folder_id' => $request->folderId,
+            'course_id' => $context['course_id'] ?? null,
+            'course_chapter_id' => $context['course_chapter_id'] ?? null,
+            'company_id' => $this->contextInt($context, 'company_id'),
+            'created_by' => $this->creatorId($request->creator, $context),
+            'source' => $context['source'] ?? null,
+            'provider' => $provider,
+            'strategy' => $providerSession->strategy,
+            'status' => VideoUploadSessionStatus::Created->value,
             'original_file_name' => $request->fileName,
-            'file_size'          => $request->fileSize,
-            'mime_type'          => $request->mimeType,
-            'title'              => $request->title,
-            'description'        => $request->description,
-            'provider_video_id'  => $providerSession->providerVideoId,
-            'upload_endpoint'    => $providerSession->uploadUrl,
-            'upload_headers'     => $providerSession->headers,
-            'metadata'           => $providerSession->metadata,
+            'file_size' => $request->fileSize,
+            'mime_type' => $request->mimeType,
+            'title' => $request->title,
+            'description' => $request->description,
+            'provider_video_id' => $providerSession->providerVideoId,
+            'upload_endpoint' => $providerSession->uploadUrl,
+            'upload_headers' => $providerSession->headers,
+            'metadata' => $providerSession->metadata,
         ]);
 
         return [
-            'video'            => $video,
-            'upload_session'   => $session,
+            'video' => $video,
+            'upload_session' => $session,
             'provider_session' => $providerSession,
         ];
     }
 
-    public function markUploaded(VideoUploadSession $session): VideoUploadSession
+    public function markUploaded(Model $session): Model
     {
         $session->loadMissing('video');
 
         $session->video->update([
-            'provider_status'  => 'uploaded',
+            'provider_status' => 'uploaded',
             'transcode_status' => 'in_progress',
         ]);
 
         $session->update([
-            'status'       => VideoUploadSessionStatus::Processing->value,
+            'status' => VideoUploadSessionStatus::Processing->value,
             'completed_at' => now(),
         ]);
 
         return $session->refresh();
     }
 
-    public function refresh(Video $video): CourseVideoStatus
+    public function refresh(Model $video): CourseVideoStatus
     {
         if (! $video->resolvedProviderVideoId()) {
             throw new \RuntimeException('Video is missing a provider video id.');
@@ -119,12 +120,12 @@ class VideoUploadService
             ->refreshStatus($video->resolvedProviderVideoId());
 
         $video->update([
-            'provider_status'  => $status->status,
+            'provider_status' => $status->status,
             'transcode_status' => $status->transcodeStatus,
-            'duration'         => $status->duration,
-            'thumbnail_url'    => $status->thumbnailUrl,
+            'duration' => $status->duration,
+            'thumbnail_url' => $status->thumbnailUrl,
             'player_embed_url' => $status->playerEmbedUrl,
-            'metadata'         => array_merge($video->metadata ?? [], $status->metadata),
+            'metadata' => array_merge($video->metadata ?? [], $status->metadata),
         ]);
 
         $video->uploadSessions()
@@ -165,7 +166,7 @@ class VideoUploadService
     /**
      * @param  array<string, mixed>  $context
      */
-    private function creatorId(?\Illuminate\Contracts\Auth\Authenticatable $creator, array $context): ?int
+    private function creatorId(?Authenticatable $creator, array $context): ?int
     {
         $id = $creator?->getAuthIdentifier() ?? $context['created_by'] ?? null;
 

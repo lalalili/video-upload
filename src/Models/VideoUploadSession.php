@@ -26,12 +26,12 @@ class VideoUploadSession extends Model
     public function casts(): array
     {
         return [
-            'status'         => VideoUploadSessionStatus::class,
+            'status' => VideoUploadSessionStatus::class,
             'upload_headers' => 'array',
-            'metadata'       => 'array',
-            'expires_at'     => 'datetime',
-            'completed_at'   => 'datetime',
-            'failed_at'      => 'datetime',
+            'metadata' => 'array',
+            'expires_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'failed_at' => 'datetime',
         ];
     }
 
