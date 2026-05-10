@@ -3,6 +3,7 @@
 namespace Lalalili\VideoUpload;
 
 use Lalalili\VideoUpload\Services\VideoUploadService;
+use Lalalili\VideoUpload\Services\VideoTargetSyncService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -21,5 +22,6 @@ class VideoUploadServiceProvider extends PackageServiceProvider
     public function registeringPackage(): void
     {
         $this->app->singleton(VideoUploadService::class);
+        $this->app->singleton(VideoTargetSyncService::class);
     }
 }

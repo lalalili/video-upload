@@ -4,6 +4,8 @@ namespace Lalalili\VideoUpload\Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Lalalili\CourseCore\CourseCoreServiceProvider;
 use Lalalili\VideoUpload\VideoUploadServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
@@ -23,6 +25,18 @@ abstract class TestCase extends OrchestraTestCase
     protected function defineDatabaseMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        Schema::create('course_units', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('video_id')->nullable();
+            $table->string('provider')->nullable();
+            $table->string('provider_video_id')->nullable();
+            $table->string('video_url')->nullable();
+            $table->string('thumbnail_url')->nullable();
+            $table->unsignedInteger('duration')->nullable();
+            $table->string('provider_status')->nullable();
+            $table->string('transcode_status')->nullable();
+            $table->timestamps();
+        });
         DB::statement('PRAGMA foreign_keys = ON');
     }
 
