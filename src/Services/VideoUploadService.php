@@ -12,8 +12,10 @@ use Lalalili\VideoUpload\Models\VideoUploadSession;
 
 class VideoUploadService
 {
-    public function __construct(private readonly CourseVideoPlatformManager $platformManager)
-    {
+    public function __construct(
+        private readonly CourseVideoPlatformManager $platformManager,
+        private readonly VideoAutoSyncService $autoSync,
+    ) {
     }
 
     /**
@@ -46,7 +48,7 @@ class VideoUploadService
             'upload_strategy'   => $providerSession->strategy,
             'provider_status'   => 'pending_upload',
             'transcode_status'  => 'pending_upload',
-            'metadata'          => array_merge($request->metadata, $providerSession->metadata),
+            'metadata'          => $this->videoMetadata($request->metadata, $providerSession->metadata, $context),
             'title'             => $request->title ?? pathinfo($request->fileName, PATHINFO_FILENAME),
             'description'       => $request->description,
             'size'              => $request->fileSize,
@@ -135,7 +137,29 @@ class VideoUploadService
             ])
             ->update(['status' => $status->isReady ? VideoUploadSessionStatus::Ready->value : VideoUploadSessionStatus::Processing->value]);
 
+        if ($status->isReady) {
+            $this->autoSync->syncWhenReady($video->refresh());
+        }
+
         return $status;
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestMetadata
+     * @param  array<string, mixed>  $providerMetadata
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function videoMetadata(array $requestMetadata, array $providerMetadata, array $context): array
+    {
+        $metadata = array_merge($requestMetadata, $providerMetadata);
+        $target = $this->autoSync->targetMetadataFromContext($context);
+
+        if ($target !== []) {
+            $metadata[(string) config('video-upload.target_sync.metadata_key', 'target')] = $target;
+        }
+
+        return $metadata;
     }
 
     /**

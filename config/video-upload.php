@@ -15,7 +15,8 @@ return [
     ],
 
     'target_sync' => [
-        'fields' => [
+        'metadata_key' => 'target',
+        'fields'       => [
             'video_id'          => 'id',
             'provider'          => 'provider',
             'provider_video_id' => 'provider_video_id',
@@ -24,6 +25,28 @@ return [
             'duration'          => 'duration',
             'provider_status'   => 'provider_status',
             'transcode_status'  => 'transcode_status',
+        ],
+    ],
+
+    'routes' => [
+        'enabled'       => true,
+        'middleware'    => [],
+        'prefix'        => 'video-upload',
+        'webhook_path'  => 'webhooks/{provider}',
+        'refresh_path'  => 'videos/{video}/refresh',
+        'playback_path' => 'videos/{video}/playback',
+    ],
+
+    'webhooks' => [
+        'cloudflare_stream' => [
+            'secret' => env('CLOUDFLARE_STREAM_WEBHOOK_SECRET'),
+        ],
+    ],
+
+    'playback' => [
+        'signed' => [
+            'enabled' => env('VIDEO_UPLOAD_SIGNED_PLAYBACK', false),
+            'ttl'     => env('VIDEO_UPLOAD_SIGNED_PLAYBACK_TTL', 3600),
         ],
     ],
 
