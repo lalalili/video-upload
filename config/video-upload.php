@@ -51,4 +51,13 @@ return [
     ],
 
     'default_strategy' => env('VIDEO_UPLOAD_STRATEGY', 'provider_direct'),
+
+    'staging_temporary_url_minutes' => env('VIDEO_UPLOAD_STAGING_URL_MINUTES', 60),
+
+    'cleanup_staging_after_import' => env('VIDEO_UPLOAD_CLEANUP_STAGING', true),
+
+    'queue' => [
+        'name'       => env('VIDEO_UPLOAD_QUEUE_NAME'),
+        'connection' => env('VIDEO_UPLOAD_QUEUE_CONNECTION'),
+    ],
 ];

@@ -18,6 +18,8 @@ return new class extends Migration
                 $table->string('provider')->index();
                 $table->string('provider_video_id')->nullable()->index();
                 $table->string('upload_strategy')->nullable();
+                $table->string('staging_disk')->nullable();
+                $table->string('staging_path')->nullable();
                 $table->string('provider_status')->nullable()->index();
                 $table->string('transcode_status')->nullable()->index();
                 $table->json('metadata')->nullable();
