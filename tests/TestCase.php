@@ -25,6 +25,13 @@ abstract class TestCase extends OrchestraTestCase
     protected function defineDatabaseMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->default('Test User');
+            $table->string('email')->unique();
+            $table->boolean('is_super_admin')->default(false);
+            $table->timestamps();
+        });
         Schema::create('course_units', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('video_id')->nullable();

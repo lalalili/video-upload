@@ -60,4 +60,11 @@ return [
         'name'       => env('VIDEO_UPLOAD_QUEUE_NAME'),
         'connection' => env('VIDEO_UPLOAD_QUEUE_CONNECTION'),
     ],
+
+    'upload_center' => [
+        'enabled'    => env('VIDEO_UPLOAD_CENTER_ENABLED', false),
+        'middleware' => ['auth', 'verified'],
+        'prefix'     => 'upload-center',
+        'route_name' => 'video-upload.upload-center',
+    ],
 ];
