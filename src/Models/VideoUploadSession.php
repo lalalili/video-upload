@@ -5,6 +5,7 @@ namespace Lalalili\VideoUpload\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 
 class VideoUploadSession extends Model
@@ -26,13 +27,24 @@ class VideoUploadSession extends Model
     public function casts(): array
     {
         return [
-            'status' => VideoUploadSessionStatus::class,
+            'status'       => VideoUploadSessionStatus::class,
             'upload_headers' => 'array',
-            'metadata' => 'array',
-            'expires_at' => 'datetime',
+            'metadata'     => 'array',
+            'expires_at'   => 'datetime',
             'completed_at' => 'datetime',
-            'failed_at' => 'datetime',
+            'failed_at'    => 'datetime',
         ];
+    }
+
+    /**
+     * Generic owner of this upload session (e.g. a course unit).
+     * Host sets target_type/target_id when creating the session.
+     *
+     * @return MorphTo<Model, $this>
+     */
+    public function target(): MorphTo
+    {
+        return $this->morphTo('target');
     }
 
     /**
