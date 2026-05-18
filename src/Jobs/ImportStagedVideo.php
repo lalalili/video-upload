@@ -12,6 +12,7 @@ use Lalalili\CourseCore\Contracts\CourseVideoPlatformManager;
 use Lalalili\CourseCore\Data\CourseVideoImportRequest;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\Video;
+use Lalalili\VideoUpload\Models\VideoUploadSession;
 
 class ImportStagedVideo implements ShouldQueue
 {
@@ -24,9 +25,7 @@ class ImportStagedVideo implements ShouldQueue
 
     public int $timeout = 300;
 
-    public function __construct(public int $videoId)
-    {
-    }
+    public function __construct(public int $videoId) {}
 
     /**
      * @return list<int>
@@ -53,7 +52,7 @@ class ImportStagedVideo implements ShouldQueue
         }
 
         $video->update([
-            'provider_status'  => 'importing',
+            'provider_status' => 'importing',
             'transcode_status' => 'importing',
         ]);
 
@@ -73,23 +72,23 @@ class ImportStagedVideo implements ShouldQueue
 
         $video->update([
             'provider_video_id' => $result->providerVideoId,
-            'link'              => $result->link,
-            'player_embed_url'  => $result->playerEmbedUrl,
-            'duration'          => $result->duration,
-            'thumbnail_url'     => $result->thumbnailUrl,
-            'status'            => $result->status,
-            'transcode_status'  => $result->transcodeStatus ?? 'in_progress',
-            'provider_status'   => 'imported',
-            'metadata'          => array_merge($video->metadata ?? [], $result->metadata),
+            'link' => $result->link,
+            'player_embed_url' => $result->playerEmbedUrl,
+            'duration' => $result->duration,
+            'thumbnail_url' => $result->thumbnailUrl,
+            'status' => $result->status,
+            'transcode_status' => $result->transcodeStatus ?? 'in_progress',
+            'provider_status' => 'imported',
+            'metadata' => array_merge($video->metadata ?? [], $result->metadata),
         ]);
 
         $sessionStatus = $this->sessionStatusAfterImport($result->status, $result->transcodeStatus);
 
         $this->updateUploadSessions($video->refresh(), [
             'provider_video_id' => $result->providerVideoId,
-            'status'            => $sessionStatus,
-            'failed_at'         => null,
-            'error_message'     => null,
+            'status' => $sessionStatus,
+            'failed_at' => null,
+            'error_message' => null,
         ]);
 
         if ($sessionStatus === VideoUploadSessionStatus::Processing) {
@@ -121,16 +120,16 @@ class ImportStagedVideo implements ShouldQueue
         }
 
         $video->update([
-            'provider_status'  => 'failed',
+            'provider_status' => 'failed',
             'transcode_status' => 'failed',
-            'metadata'         => array_merge($video->metadata ?? [], [
+            'metadata' => array_merge($video->metadata ?? [], [
                 'last_import_error' => $exception->getMessage(),
             ]),
         ]);
 
         $this->updateUploadSessions($video, [
-            'status'        => VideoUploadSessionStatus::Failed,
-            'failed_at'     => now(),
+            'status' => VideoUploadSessionStatus::Failed,
+            'failed_at' => now(),
             'error_message' => $exception->getMessage(),
         ]);
     }
@@ -156,13 +155,13 @@ class ImportStagedVideo implements ShouldQueue
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function updateUploadSessions($video, array $attributes): void
+    private function updateUploadSessions(Video $video, array $attributes): void
     {
         if (($attributes['status'] ?? null) instanceof VideoUploadSessionStatus) {
             $attributes['status'] = $attributes['status']->value;
         }
 
-        $sessionClass = config('video-upload.models.session', \Lalalili\VideoUpload\Models\VideoUploadSession::class);
+        $sessionClass = config('video-upload.models.session', VideoUploadSession::class);
 
         $sessionClass::query()
             ->where('video_id', $video->getKey())

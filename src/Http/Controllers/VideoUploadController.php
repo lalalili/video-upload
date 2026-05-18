@@ -2,7 +2,6 @@
 
 namespace Lalalili\VideoUpload\Http\Controllers;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,7 @@ class VideoUploadController
 
         $video = $webhooks->handle($provider, $request->all());
 
-        return response($video instanceof Model ? '1|OK' : '0|NOT_FOUND', $video instanceof Model ? 200 : 404)
+        return response($video instanceof Video ? '1|OK' : '0|NOT_FOUND', $video instanceof Video ? 200 : 404)
             ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
@@ -51,13 +50,11 @@ class VideoUploadController
         return redirect()->away($url);
     }
 
-    private function resolveVideo(int|string $key): Model
+    private function resolveVideo(int|string $key): Video
     {
-        /** @var class-string<Model> $videoModel */
-        $videoModel = config('video-upload.models.video', Video::class);
+        $videoModel = $this->videoModelClass();
 
-        /** @var Model $video */
-        $video = $videoModel::query()->findOrFail($key);
+        $video = $videoModel::query()->whereKey($key)->firstOrFail();
 
         return $video;
     }
@@ -70,6 +67,23 @@ class VideoUploadController
             return true;
         }
 
-        return hash_equals($secret, (string) $request->header('X-Video-Upload-Secret', $request->input('secret', '')));
+        $providedSecret = $request->header('X-Video-Upload-Secret');
+        if (! is_string($providedSecret)) {
+            $providedSecret = $request->input('secret', '');
+        }
+
+        return hash_equals($secret, is_string($providedSecret) ? $providedSecret : '');
+    }
+
+    /**
+     * @return class-string<Video>
+     */
+    private function videoModelClass(): string
+    {
+        $model = config('video-upload.models.video', Video::class);
+
+        return is_string($model) && is_subclass_of($model, Video::class)
+            ? $model
+            : Video::class;
     }
 }

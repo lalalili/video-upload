@@ -3,7 +3,7 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Aws\S3\S3Client;
-use Illuminate\Database\Eloquent\Model;
+use Lalalili\VideoUpload\Models\VideoUploadSession;
 use RuntimeException;
 
 class S3MultipartUploadService
@@ -11,48 +11,48 @@ class S3MultipartUploadService
     /**
      * @return array{uploadId: string, key: string}
      */
-    public function create(Model $session): array
+    public function create(VideoUploadSession $session): array
     {
         if ($this->shouldFake($session)) {
             return [
                 'uploadId' => 'test-upload-'.$session->ulid,
-                'key'      => (string) $session->staging_path,
+                'key' => (string) $session->staging_path,
             ];
         }
 
         $result = $this->client((string) $session->staging_disk)->createMultipartUpload([
-            'Bucket'      => $this->bucket((string) $session->staging_disk),
-            'Key'         => (string) $session->staging_path,
+            'Bucket' => $this->bucket((string) $session->staging_disk),
+            'Key' => (string) $session->staging_path,
             'ContentType' => $session->mime_type ?: 'application/octet-stream',
-            'Metadata'    => [
-                'video-id'          => (string) $session->video_id,
+            'Metadata' => [
+                'video-id' => (string) $session->video_id,
                 'upload-session-id' => (string) $session->id,
             ],
         ]);
 
         return [
             'uploadId' => (string) $result->get('UploadId'),
-            'key'      => (string) $session->staging_path,
+            'key' => (string) $session->staging_path,
         ];
     }
 
     /**
      * @return array{url: string, headers: array<string, string>}
      */
-    public function signPart(Model $session, int $partNumber): array
+    public function signPart(VideoUploadSession $session, int $partNumber): array
     {
         if ($this->shouldFake($session)) {
             return [
-                'url'     => "https://s3-upload.test/{$session->staging_path}?partNumber={$partNumber}",
+                'url' => "https://s3-upload.test/{$session->staging_path}?partNumber={$partNumber}",
                 'headers' => [],
             ];
         }
 
         $client = $this->client((string) $session->staging_disk);
         $command = $client->getCommand('UploadPart', [
-            'Bucket'     => $this->bucket((string) $session->staging_disk),
-            'Key'        => (string) $session->staging_path,
-            'UploadId'   => (string) $session->multipart_upload_id,
+            'Bucket' => $this->bucket((string) $session->staging_disk),
+            'Key' => (string) $session->staging_path,
+            'UploadId' => (string) $session->multipart_upload_id,
             'PartNumber' => $partNumber,
         ]);
 
@@ -62,7 +62,7 @@ class S3MultipartUploadService
         );
 
         return [
-            'url'     => (string) $request->getUri(),
+            'url' => (string) $request->getUri(),
             'headers' => [],
         ];
     }
@@ -71,31 +71,31 @@ class S3MultipartUploadService
      * @param  array<int, array{PartNumber:int, ETag:string}>  $parts
      * @return array{location: string|null}
      */
-    public function complete(Model $session, array $parts): array
+    public function complete(VideoUploadSession $session, array $parts): array
     {
         if ($this->shouldFake($session)) {
             return ['location' => "https://s3-upload.test/{$session->staging_path}"];
         }
 
         $result = $this->client((string) $session->staging_disk)->completeMultipartUpload([
-            'Bucket'          => $this->bucket((string) $session->staging_disk),
-            'Key'             => (string) $session->staging_path,
-            'UploadId'        => (string) $session->multipart_upload_id,
+            'Bucket' => $this->bucket((string) $session->staging_disk),
+            'Key' => (string) $session->staging_path,
+            'UploadId' => (string) $session->multipart_upload_id,
             'MultipartUpload' => ['Parts' => $parts],
         ]);
 
         return ['location' => $result->get('Location') ? (string) $result->get('Location') : null];
     }
 
-    public function abort(Model $session): void
+    public function abort(VideoUploadSession $session): void
     {
         if ($this->shouldFake($session) || ! $session->multipart_upload_id) {
             return;
         }
 
         $this->client((string) $session->staging_disk)->abortMultipartUpload([
-            'Bucket'   => $this->bucket((string) $session->staging_disk),
-            'Key'      => (string) $session->staging_path,
+            'Bucket' => $this->bucket((string) $session->staging_disk),
+            'Key' => (string) $session->staging_path,
             'UploadId' => (string) $session->multipart_upload_id,
         ]);
     }
@@ -103,15 +103,15 @@ class S3MultipartUploadService
     /**
      * @return array<int, array{PartNumber:int, ETag:string, Size:int}>
      */
-    public function listParts(Model $session): array
+    public function listParts(VideoUploadSession $session): array
     {
         if ($this->shouldFake($session) || ! $session->multipart_upload_id) {
             return [];
         }
 
         $result = $this->client((string) $session->staging_disk)->listParts([
-            'Bucket'   => $this->bucket((string) $session->staging_disk),
-            'Key'      => (string) $session->staging_path,
+            'Bucket' => $this->bucket((string) $session->staging_disk),
+            'Key' => (string) $session->staging_path,
             'UploadId' => (string) $session->multipart_upload_id,
         ]);
 
@@ -120,8 +120,8 @@ class S3MultipartUploadService
         return collect(is_array($parts) ? $parts : [])
             ->map(fn (array $part): array => [
                 'PartNumber' => (int) $part['PartNumber'],
-                'ETag'       => (string) $part['ETag'],
-                'Size'       => (int) $part['Size'],
+                'ETag' => (string) $part['ETag'],
+                'Size' => (int) $part['Size'],
             ])
             ->all();
     }
@@ -131,12 +131,12 @@ class S3MultipartUploadService
         $config = $this->diskConfig($disk);
 
         return new S3Client(array_filter([
-            'version'                 => 'latest',
-            'region'                  => $config['region'] ?? config('aws.region', 'us-east-1'),
-            'endpoint'                => $config['endpoint'] ?? null,
+            'version' => 'latest',
+            'region' => $config['region'] ?? config('aws.region', 'us-east-1'),
+            'endpoint' => $config['endpoint'] ?? null,
             'use_path_style_endpoint' => $config['use_path_style_endpoint'] ?? false,
-            'credentials'             => [
-                'key'    => $config['key'] ?? config('aws.credentials.key'),
+            'credentials' => [
+                'key' => $config['key'] ?? config('aws.credentials.key'),
                 'secret' => $config['secret'] ?? config('aws.credentials.secret'),
             ],
         ], fn (mixed $value): bool => $value !== null && $value !== ''));
@@ -167,7 +167,7 @@ class S3MultipartUploadService
         return $config;
     }
 
-    private function shouldFake(Model $session): bool
+    private function shouldFake(VideoUploadSession $session): bool
     {
         $disk = (string) $session->staging_disk;
 

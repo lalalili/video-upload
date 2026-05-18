@@ -3,7 +3,6 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Model;
 use Lalalili\CourseCore\Contracts\CourseVideoPlatformManager;
 use Lalalili\CourseCore\Data\CourseVideoStatus;
 use Lalalili\CourseCore\Data\CourseVideoUploadRequest;
@@ -21,7 +20,7 @@ class VideoUploadService
 
     /**
      * @param  array<string, mixed>  $context
-     * @return array{video: Model, upload_session: Model, provider_session: ProviderUploadSession}
+     * @return array{video: Video, upload_session: VideoUploadSession, provider_session: ProviderUploadSession}
      */
     public function createProviderDirectSession(
         CourseVideoUploadRequest $request,
@@ -37,12 +36,9 @@ class VideoUploadService
             throw new \RuntimeException("Video provider [{$provider}] does not support direct uploads.");
         }
 
-        /** @var class-string<Model> $videoModel */
-        $videoModel = config('video-upload.models.video', Video::class);
-        /** @var class-string<Model> $sessionModel */
-        $sessionModel = config('video-upload.models.session', VideoUploadSession::class);
+        $videoModel = $this->videoModelClass();
+        $sessionModel = $this->sessionModelClass();
 
-        /** @var Model $video */
         $video = $videoModel::query()->create([
             'provider' => $provider,
             'provider_video_id' => $providerSession->providerVideoId,
@@ -62,7 +58,6 @@ class VideoUploadService
             'updated_by' => $this->creatorId($request->creator, $context),
         ]);
 
-        /** @var Model $session */
         $session = $sessionModel::query()->create([
             'video_id' => $video->getKey(),
             'folder_id' => $request->folderId,
@@ -92,14 +87,16 @@ class VideoUploadService
         ];
     }
 
-    public function markUploaded(Model $session): Model
+    public function markUploaded(VideoUploadSession $session): VideoUploadSession
     {
         $session->loadMissing('video');
 
-        $session->video->update([
-            'provider_status' => 'uploaded',
-            'transcode_status' => 'in_progress',
-        ]);
+        if ($session->video instanceof Video) {
+            $session->video->update([
+                'provider_status' => 'uploaded',
+                'transcode_status' => 'in_progress',
+            ]);
+        }
 
         $session->update([
             'status' => VideoUploadSessionStatus::Processing->value,
@@ -109,7 +106,7 @@ class VideoUploadService
         return $session->refresh();
     }
 
-    public function refresh(Model $video): CourseVideoStatus
+    public function refresh(Video $video): CourseVideoStatus
     {
         if (! $video->resolvedProviderVideoId()) {
             throw new \RuntimeException('Video is missing a provider video id.');
@@ -179,5 +176,29 @@ class VideoUploadService
     private function contextInt(array $context, string $key): ?int
     {
         return is_numeric($context[$key] ?? null) ? (int) $context[$key] : null;
+    }
+
+    /**
+     * @return class-string<Video>
+     */
+    private function videoModelClass(): string
+    {
+        $model = config('video-upload.models.video', Video::class);
+
+        return is_string($model) && is_subclass_of($model, Video::class)
+            ? $model
+            : Video::class;
+    }
+
+    /**
+     * @return class-string<VideoUploadSession>
+     */
+    private function sessionModelClass(): string
+    {
+        $model = config('video-upload.models.session', VideoUploadSession::class);
+
+        return is_string($model) && is_subclass_of($model, VideoUploadSession::class)
+            ? $model
+            : VideoUploadSession::class;
     }
 }

@@ -3,6 +3,7 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Illuminate\Database\Eloquent\Model;
+use Lalalili\VideoUpload\Models\Video;
 
 class VideoTargetSyncService
 {
@@ -23,7 +24,7 @@ class VideoTargetSyncService
     /**
      * @param  array<string, string>|null  $fieldMap
      */
-    public function sync(Model $video, Model $target, ?array $fieldMap = null): Model
+    public function sync(Video $video, Model $target, ?array $fieldMap = null): Model
     {
         $attributes = $this->mappedAttributes($video, $target, $fieldMap ?? $this->configuredFieldMap());
 
@@ -36,7 +37,10 @@ class VideoTargetSyncService
         return $target->refresh();
     }
 
-    public function syncWhenReady(Model $video, Model $target, ?array $fieldMap = null): ?Model
+    /**
+     * @param  array<string, string>|null  $fieldMap
+     */
+    public function syncWhenReady(Video $video, Model $target, ?array $fieldMap = null): ?Model
     {
         if (! $this->isReady($video)) {
             return null;
@@ -49,15 +53,11 @@ class VideoTargetSyncService
      * @param  array<string, string>  $fieldMap
      * @return array<string, mixed>
      */
-    private function mappedAttributes(Model $video, Model $target, array $fieldMap): array
+    private function mappedAttributes(Video $video, Model $target, array $fieldMap): array
     {
         $attributes = [];
 
         foreach ($fieldMap as $targetField => $videoField) {
-            if (! is_string($targetField) || ! is_string($videoField)) {
-                continue;
-            }
-
             if (! $target->getConnection()->getSchemaBuilder()->hasColumn($target->getTable(), $targetField)) {
                 continue;
             }
@@ -82,7 +82,7 @@ class VideoTargetSyncService
         return $fieldMap === [] ? self::DEFAULT_FIELD_MAP : $fieldMap;
     }
 
-    private function isReady(Model $video): bool
+    private function isReady(Video $video): bool
     {
         return in_array((string) $video->provider_status, ['ready', 'complete', 'completed'], true)
             || in_array((string) $video->transcode_status, ['ready', 'complete', 'completed'], true);

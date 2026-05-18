@@ -2,7 +2,6 @@
 
 namespace Lalalili\VideoUpload\Http\Controllers\UploadCenter;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
@@ -11,14 +10,11 @@ use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
 
 class VideoUploadSessionController
 {
-    public function __construct(private readonly VideoUploadSessionPayload $payload)
-    {
-    }
+    public function __construct(private readonly VideoUploadSessionPayload $payload) {}
 
     public function index(Request $request): JsonResponse
     {
-        /** @var class-string<Model> $sessionClass */
-        $sessionClass = config('video-upload.models.session', VideoUploadSession::class);
+        $sessionClass = $this->sessionModelClass();
 
         $query = $sessionClass::query()
             ->with('video:id,title,provider,provider_video_id,player_embed_url,status,transcode_status,provider_status');
@@ -30,7 +26,7 @@ class VideoUploadSessionController
         $sessions = $query->latest()->limit(50)->get();
 
         return response()->json([
-            'data' => $sessions->map(fn (Model $session): array => $this->payload->make($session))->all(),
+            'data' => $sessions->map(fn (VideoUploadSession $session): array => $this->payload->make($session))->all(),
         ]);
     }
 
@@ -68,7 +64,7 @@ class VideoUploadSessionController
         $bytesUploaded = min((int) $validated['bytes_uploaded'], (int) $session->file_size);
 
         $session->update([
-            'status'         => 'uploading',
+            'status' => 'uploading',
             'bytes_uploaded' => $bytesUploaded,
         ]);
 
@@ -83,12 +79,12 @@ class VideoUploadSessionController
         abort_unless($session->status->canCancel(), 422, 'This upload session cannot be cancelled.');
 
         $session->update([
-            'status'       => 'cancelled',
+            'status' => 'cancelled',
             'completed_at' => now(),
         ]);
 
         $session->video()->update([
-            'provider_status'  => 'cancelled',
+            'provider_status' => 'cancelled',
             'transcode_status' => 'cancelled',
         ]);
 
@@ -107,13 +103,13 @@ class VideoUploadSessionController
         ]);
 
         $session->update([
-            'status'        => 'failed',
-            'failed_at'     => now(),
+            'status' => 'failed',
+            'failed_at' => now(),
             'error_message' => $validated['error_message'] ?? null,
         ]);
 
         $session->video()->update([
-            'provider_status'  => 'failed',
+            'provider_status' => 'failed',
             'transcode_status' => 'failed',
         ]);
 
@@ -128,16 +124,16 @@ class VideoUploadSessionController
         abort_unless($session->status->canRetry(), 422, 'This upload session cannot be retried.');
 
         $session->update([
-            'status'              => 'created',
-            'bytes_uploaded'      => 0,
+            'status' => 'created',
+            'bytes_uploaded' => 0,
             'multipart_upload_id' => null,
-            'failed_at'           => null,
-            'completed_at'        => null,
-            'error_message'       => null,
+            'failed_at' => null,
+            'completed_at' => null,
+            'error_message' => null,
         ]);
 
         $session->video()->update([
-            'provider_status'  => 'pending_upload',
+            'provider_status' => 'pending_upload',
             'transcode_status' => 'pending_upload',
         ]);
 
@@ -149,7 +145,7 @@ class VideoUploadSessionController
         return (bool) $request->user()?->is_super_admin;
     }
 
-    protected function authorizeSession(Model $session): void
+    protected function authorizeSession(VideoUploadSession $session): void
     {
         abort_unless(
             (int) $session->created_by === (int) auth()->id() || (bool) auth()->user()?->is_super_admin,
@@ -157,11 +153,22 @@ class VideoUploadSessionController
         );
     }
 
-    protected function resolveSession(Request $request, string $param = 'session'): Model
+    protected function resolveSession(Request $request, string $param = 'session'): VideoUploadSession
     {
-        /** @var class-string<Model> $sessionClass */
-        $sessionClass = config('video-upload.models.session', VideoUploadSession::class);
+        $sessionClass = $this->sessionModelClass();
 
-        return $sessionClass::query()->findOrFail($request->route($param));
+        return $sessionClass::query()->whereKey($request->route($param))->firstOrFail();
+    }
+
+    /**
+     * @return class-string<VideoUploadSession>
+     */
+    protected function sessionModelClass(): string
+    {
+        $model = config('video-upload.models.session', VideoUploadSession::class);
+
+        return is_string($model) && is_subclass_of($model, VideoUploadSession::class)
+            ? $model
+            : VideoUploadSession::class;
     }
 }

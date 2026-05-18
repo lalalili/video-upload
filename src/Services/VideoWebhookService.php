@@ -22,16 +22,14 @@ class VideoWebhookService
             return null;
         }
 
-        /** @var class-string<Model> $videoModel */
-        $videoModel = config('video-upload.models.video', Video::class);
+        $videoModel = $this->videoModelClass();
 
-        /** @var Model|null $video */
         $video = $videoModel::query()
             ->where('provider', $provider)
             ->where('provider_video_id', $providerVideoId)
             ->first();
 
-        if (! $video instanceof Model) {
+        if (! $video instanceof Video) {
             return null;
         }
 
@@ -78,6 +76,18 @@ class VideoWebhookService
         $id = data_get($payload, 'uid', data_get($payload, 'data.uid', data_get($payload, 'video.uid')));
 
         return is_string($id) && $id !== '' ? $id : null;
+    }
+
+    /**
+     * @return class-string<Video>
+     */
+    private function videoModelClass(): string
+    {
+        $model = config('video-upload.models.video', Video::class);
+
+        return is_string($model) && is_subclass_of($model, Video::class)
+            ? $model
+            : Video::class;
     }
 
     /**

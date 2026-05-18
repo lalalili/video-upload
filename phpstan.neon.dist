@@ -1,0 +1,20 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src/
+        - config/
+        - database/
+        - routes/
+
+    level: 8
+    tmpDir: build/phpstan
+    checkModelProperties: false
+    reportUnmatchedIgnoredErrors: false
+    universalObjectCratesClasses:
+        - Illuminate\Database\Eloquent\Model
+
+    ignoreErrors:
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+          path: config/*

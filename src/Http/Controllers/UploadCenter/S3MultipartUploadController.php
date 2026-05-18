@@ -2,7 +2,6 @@
 
 namespace Lalalili\VideoUpload\Http\Controllers\UploadCenter;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
@@ -12,9 +11,7 @@ use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
 
 class S3MultipartUploadController
 {
-    public function __construct(private readonly VideoUploadSessionPayload $payload)
-    {
-    }
+    public function __construct(private readonly VideoUploadSessionPayload $payload) {}
 
     public function create(Request $request, S3MultipartUploadService $multipart): JsonResponse
     {
@@ -33,13 +30,13 @@ class S3MultipartUploadController
 
         $session->update([
             'multipart_upload_id' => $created['uploadId'],
-            'status'              => 'uploading',
+            'status' => 'uploading',
         ]);
 
         return response()->json([
             'uploadId' => $created['uploadId'],
-            'key'      => $created['key'],
-            'session'  => $this->payload->make($session->refresh()),
+            'key' => $created['key'],
+            'session' => $this->payload->make($session->refresh()),
         ]);
     }
 
@@ -72,18 +69,18 @@ class S3MultipartUploadController
         $this->authorizeSession($session);
 
         $validated = $request->validate([
-            'parts'              => ['required', 'array', 'min:1'],
+            'parts' => ['required', 'array', 'min:1'],
             'parts.*.PartNumber' => ['required_without:parts.*.partNumber', 'integer', 'min:1', 'max:10000'],
             'parts.*.partNumber' => ['required_without:parts.*.PartNumber', 'integer', 'min:1', 'max:10000'],
-            'parts.*.ETag'       => ['required_without:parts.*.etag', 'string'],
-            'parts.*.etag'       => ['required_without:parts.*.ETag', 'string'],
+            'parts.*.ETag' => ['required_without:parts.*.etag', 'string'],
+            'parts.*.etag' => ['required_without:parts.*.ETag', 'string'],
         ]);
 
         $validatedParts = is_array($validated['parts'] ?? null) ? $validated['parts'] : [];
         $parts = collect($validatedParts)
             ->map(fn (array $part): array => [
                 'PartNumber' => (int) ($part['PartNumber'] ?? $part['partNumber']),
-                'ETag'       => (string) ($part['ETag'] ?? $part['etag']),
+                'ETag' => (string) ($part['ETag'] ?? $part['etag']),
             ])
             ->sortBy('PartNumber')
             ->values()
@@ -92,9 +89,9 @@ class S3MultipartUploadController
         $result = $multipart->complete($session, $parts);
 
         $session->update([
-            'status'         => 'uploaded',
-            'completed_at'   => now(),
-            'metadata'       => array_merge($session->metadata ?? [], ['s3_complete' => $result]),
+            'status' => 'uploaded',
+            'completed_at' => now(),
+            'metadata' => array_merge($session->metadata ?? [], ['s3_complete' => $result]),
             'bytes_uploaded' => (int) $session->file_size,
         ]);
 
@@ -102,7 +99,7 @@ class S3MultipartUploadController
 
         return response()->json([
             'location' => $result['location'],
-            'session'  => $this->payload->make($session->refresh()),
+            'session' => $this->payload->make($session->refresh()),
         ]);
     }
 
@@ -116,19 +113,19 @@ class S3MultipartUploadController
         $multipart->abort($session);
 
         $session->update([
-            'status'       => 'cancelled',
+            'status' => 'cancelled',
             'completed_at' => now(),
         ]);
 
         $session->video()->update([
-            'provider_status'  => 'cancelled',
+            'provider_status' => 'cancelled',
             'transcode_status' => 'cancelled',
         ]);
 
         return response()->json($this->payload->make($session->refresh()));
     }
 
-    protected function authorizeSession(Model $session): void
+    protected function authorizeSession(VideoUploadSession $session): void
     {
         abort_unless(
             (int) $session->created_by === (int) auth()->id() || (bool) auth()->user()?->is_super_admin,
@@ -136,19 +133,29 @@ class S3MultipartUploadController
         );
     }
 
-    protected function resolveSession(Request $request, string $param = 'session'): Model
+    protected function resolveSession(Request $request, string $param = 'session'): VideoUploadSession
     {
-        /** @var class-string<Model> $sessionClass */
-        $sessionClass = config('video-upload.models.session', VideoUploadSession::class);
+        $sessionClass = $this->sessionModelClass();
 
-        return $sessionClass::query()->findOrFail($request->route($param));
+        return $sessionClass::query()->whereKey($request->route($param))->firstOrFail();
     }
 
-    protected function resolveSessionById(int $id): Model
+    protected function resolveSessionById(int $id): VideoUploadSession
     {
-        /** @var class-string<Model> $sessionClass */
-        $sessionClass = config('video-upload.models.session', VideoUploadSession::class);
+        $sessionClass = $this->sessionModelClass();
 
-        return $sessionClass::query()->findOrFail($id);
+        return $sessionClass::query()->whereKey($id)->firstOrFail();
+    }
+
+    /**
+     * @return class-string<VideoUploadSession>
+     */
+    protected function sessionModelClass(): string
+    {
+        $model = config('video-upload.models.session', VideoUploadSession::class);
+
+        return is_string($model) && is_subclass_of($model, VideoUploadSession::class)
+            ? $model
+            : VideoUploadSession::class;
     }
 }

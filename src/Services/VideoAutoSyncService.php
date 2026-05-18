@@ -3,12 +3,13 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Illuminate\Database\Eloquent\Model;
+use Lalalili\VideoUpload\Models\Video;
 
 class VideoAutoSyncService
 {
     public function __construct(private readonly VideoTargetSyncService $targets) {}
 
-    public function syncWhenReady(Model $video): ?Model
+    public function syncWhenReady(Video $video): ?Model
     {
         $target = $this->resolveTarget($video);
 
@@ -28,7 +29,7 @@ class VideoAutoSyncService
         $model = $context['target_model'] ?? $context['target_type'] ?? null;
         $id = $context['target_id'] ?? null;
 
-        if (! is_string($model) || $model === '' || ! class_exists($model) || $id === null) {
+        if (! is_string($model) || $model === '' || ! is_subclass_of($model, Model::class) || $id === null) {
             return [];
         }
 
@@ -46,7 +47,7 @@ class VideoAutoSyncService
         return $metadata;
     }
 
-    private function resolveTarget(Model $video): ?Model
+    private function resolveTarget(Video $video): ?Model
     {
         $target = data_get($video->metadata ?? [], $this->metadataKey());
         $modelClass = data_get($target, 'model');
@@ -56,14 +57,13 @@ class VideoAutoSyncService
             return null;
         }
 
-        /** @var class-string<Model> $modelClass */
-        return $modelClass::query()->find($id);
+        return $modelClass::query()->whereKey($id)->first();
     }
 
     /**
      * @return array<string, string>|null
      */
-    private function fieldMap(Model $video): ?array
+    private function fieldMap(Video $video): ?array
     {
         $fields = data_get($video->metadata ?? [], $this->metadataKey().'.fields');
 

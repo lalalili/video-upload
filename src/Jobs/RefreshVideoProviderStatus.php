@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Lalalili\CourseCore\Contracts\CourseVideoPlatformManager;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\Video;
+use Lalalili\VideoUpload\Models\VideoUploadSession;
 use Lalalili\VideoUpload\Services\VideoAutoSyncService;
 
 class RefreshVideoProviderStatus implements ShouldQueue
@@ -29,12 +30,11 @@ class RefreshVideoProviderStatus implements ShouldQueue
     public function __construct(
         public readonly ?int $videoId = null,
         public readonly int $attempt = 0,
-    ) {
-    }
+    ) {}
 
     public function handle(CourseVideoPlatformManager $platforms): void
     {
-        $videoClass = config('video-upload.models.video', Video::class);
+        $videoClass = $this->videoModelClass();
 
         if ($this->videoId !== null) {
             $video = $videoClass::query()->find($this->videoId);
@@ -70,7 +70,7 @@ class RefreshVideoProviderStatus implements ShouldQueue
         return config('video-upload.queue.connection') ?: null;
     }
 
-    private function rescheduleIfNeeded($video): void
+    private function rescheduleIfNeeded(Video $video): void
     {
         if ($video->status === 1) {
             return;
@@ -85,7 +85,7 @@ class RefreshVideoProviderStatus implements ShouldQueue
         if ($this->attempt >= self::MAX_SINGLE_VIDEO_ATTEMPTS) {
             Log::warning('[RefreshVideoProviderStatus] max single-video polling attempts reached, stopping', [
                 'video_id' => $video->id,
-                'attempt'  => $this->attempt,
+                'attempt' => $this->attempt,
             ]);
 
             return;
@@ -105,20 +105,20 @@ class RefreshVideoProviderStatus implements ShouldQueue
         }
     }
 
-    private function syncVideo($video, CourseVideoPlatformManager $platforms): void
+    private function syncVideo(Video $video, CourseVideoPlatformManager $platforms): void
     {
         try {
             $providerVideoId = $video->provider_video_id;
 
             if (! $providerVideoId) {
                 $video->update([
-                    'provider_status'  => 'missing_provider_video_id',
+                    'provider_status' => 'missing_provider_video_id',
                     'transcode_status' => 'missing_provider_video_id',
                 ]);
 
                 $this->syncUploadSessions($video, VideoUploadSessionStatus::Failed, [
                     'error_message' => 'missing_provider_video_id',
-                    'failed_at'     => now(),
+                    'failed_at' => now(),
                 ]);
 
                 Log::warning('[RefreshVideoProviderStatus] provider video ID missing, stopping', [
@@ -135,13 +135,13 @@ class RefreshVideoProviderStatus implements ShouldQueue
 
             if ($status->isReady) {
                 $video->update([
-                    'duration'         => $status->duration ?? $video->duration,
-                    'thumbnail_url'    => $status->thumbnailUrl ?? $video->thumbnail_url,
+                    'duration' => $status->duration ?? $video->duration,
+                    'thumbnail_url' => $status->thumbnailUrl ?? $video->thumbnail_url,
                     'player_embed_url' => $status->playerEmbedUrl ?? $video->player_embed_url,
-                    'status'           => 1,
-                    'provider_status'  => $status->status,
+                    'status' => 1,
+                    'provider_status' => $status->status,
                     'transcode_status' => $status->transcodeStatus ?? 'completed',
-                    'metadata'         => array_merge($video->metadata ?? [], $status->metadata),
+                    'metadata' => array_merge($video->metadata ?? [], $status->metadata),
                 ]);
 
                 $this->syncUploadSessions($video, VideoUploadSessionStatus::Ready);
@@ -151,18 +151,18 @@ class RefreshVideoProviderStatus implements ShouldQueue
             }
 
             $video->update([
-                'provider_status'  => $status->status,
+                'provider_status' => $status->status,
                 'transcode_status' => $status->transcodeStatus ?? $status->status,
-                'metadata'         => array_merge($video->metadata ?? [], $status->metadata),
+                'metadata' => array_merge($video->metadata ?? [], $status->metadata),
             ]);
 
             $this->syncUploadSessions($video, VideoUploadSessionStatus::Processing);
         } catch (\Throwable $exception) {
             Log::error('RefreshVideoProviderStatus: failed to sync video provider status', [
-                'video_id'          => $video->id,
-                'provider'          => $video->provider,
+                'video_id' => $video->id,
+                'provider' => $video->provider,
                 'provider_video_id' => $video->provider_video_id,
-                'message'           => $exception->getMessage(),
+                'message' => $exception->getMessage(),
             ]);
         }
     }
@@ -170,9 +170,9 @@ class RefreshVideoProviderStatus implements ShouldQueue
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function syncUploadSessions($video, VideoUploadSessionStatus $status, array $attributes = []): void
+    private function syncUploadSessions(Video $video, VideoUploadSessionStatus $status, array $attributes = []): void
     {
-        $sessionClass = config('video-upload.models.session', \Lalalili\VideoUpload\Models\VideoUploadSession::class);
+        $sessionClass = $this->sessionModelClass();
 
         $sessionClass::query()
             ->where('video_id', $video->getKey())
@@ -181,5 +181,29 @@ class RefreshVideoProviderStatus implements ShouldQueue
                 VideoUploadSessionStatus::Processing->value,
             ])
             ->update(array_merge(['status' => $status->value], $attributes));
+    }
+
+    /**
+     * @return class-string<Video>
+     */
+    private function videoModelClass(): string
+    {
+        $model = config('video-upload.models.video', Video::class);
+
+        return is_string($model) && is_subclass_of($model, Video::class)
+            ? $model
+            : Video::class;
+    }
+
+    /**
+     * @return class-string<VideoUploadSession>
+     */
+    private function sessionModelClass(): string
+    {
+        $model = config('video-upload.models.session', VideoUploadSession::class);
+
+        return is_string($model) && is_subclass_of($model, VideoUploadSession::class)
+            ? $model
+            : VideoUploadSession::class;
     }
 }

@@ -35,7 +35,7 @@ if (config('video-upload.upload_center.enabled', false)) {
     Route::middleware(is_array($ucMiddleware) ? $ucMiddleware : [$ucMiddleware])
         ->prefix($ucPrefix)
         ->name($routeName.'.')
-        ->group(function () use ($routeName): void {
+        ->group(function (): void {
             Route::get('/videos', [VideoUploadSessionController::class, 'index'])
                 ->name('videos.index');
             Route::post('/videos', [VideoUploadSessionController::class, 'store'])

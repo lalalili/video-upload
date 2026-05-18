@@ -19,6 +19,9 @@ class VideoUploadSession extends Model
         return config('video-upload.tables.sessions', 'video_upload_sessions');
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function uniqueIds(): array
     {
         return ['ulid'];
@@ -27,12 +30,12 @@ class VideoUploadSession extends Model
     public function casts(): array
     {
         return [
-            'status'       => VideoUploadSessionStatus::class,
+            'status' => VideoUploadSessionStatus::class,
             'upload_headers' => 'array',
-            'metadata'     => 'array',
-            'expires_at'   => 'datetime',
+            'metadata' => 'array',
+            'expires_at' => 'datetime',
             'completed_at' => 'datetime',
-            'failed_at'    => 'datetime',
+            'failed_at' => 'datetime',
         ];
     }
 
@@ -52,9 +55,23 @@ class VideoUploadSession extends Model
      */
     public function video(): BelongsTo
     {
+        $videoModel = $this->videoModelClass();
+
         /** @var BelongsTo<Video, $this> $relation */
-        $relation = $this->belongsTo(config('video-upload.models.video', Video::class));
+        $relation = $this->belongsTo($videoModel);
 
         return $relation;
+    }
+
+    /**
+     * @return class-string<Video>
+     */
+    protected function videoModelClass(): string
+    {
+        $model = config('video-upload.models.video', Video::class);
+
+        return is_string($model) && is_subclass_of($model, Video::class)
+            ? $model
+            : Video::class;
     }
 }

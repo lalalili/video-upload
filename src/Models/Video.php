@@ -26,8 +26,10 @@ class Video extends Model
      */
     public function uploadSessions(): HasMany
     {
+        $sessionModel = $this->sessionModelClass();
+
         /** @var HasMany<VideoUploadSession, $this> $relation */
-        $relation = $this->hasMany(config('video-upload.models.session', VideoUploadSession::class));
+        $relation = $this->hasMany($sessionModel);
 
         return $relation;
     }
@@ -37,5 +39,17 @@ class Video extends Model
         return is_string($this->provider_video_id) && $this->provider_video_id !== ''
             ? $this->provider_video_id
             : null;
+    }
+
+    /**
+     * @return class-string<VideoUploadSession>
+     */
+    protected function sessionModelClass(): string
+    {
+        $model = config('video-upload.models.session', VideoUploadSession::class);
+
+        return is_string($model) && is_subclass_of($model, VideoUploadSession::class)
+            ? $model
+            : VideoUploadSession::class;
     }
 }
