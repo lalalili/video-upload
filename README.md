@@ -70,3 +70,11 @@ POST /video-upload/videos/{video}/refresh
 ```
 
 When a video becomes ready, `VideoTargetSyncService` copies provider fields to the configured target model.
+
+## Tests
+
+From the package directory:
+
+```bash
+./vendor/bin/pest
+```
