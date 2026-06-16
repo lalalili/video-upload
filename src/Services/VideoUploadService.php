@@ -3,6 +3,7 @@
 namespace Lalalili\VideoUpload\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Lalalili\CourseCore\Contracts\CourseVideoPlatformManager;
 use Lalalili\CourseCore\Data\CourseVideoStatus;
 use Lalalili\CourseCore\Data\CourseVideoUploadRequest;
@@ -20,7 +21,7 @@ class VideoUploadService
 
     /**
      * @param  array<string, mixed>  $context
-     * @return array{video: Video, upload_session: VideoUploadSession, provider_session: ProviderUploadSession}
+     * @return array{video: Model, upload_session: Model, provider_session: ProviderUploadSession}
      */
     public function createProviderDirectSession(
         CourseVideoUploadRequest $request,
