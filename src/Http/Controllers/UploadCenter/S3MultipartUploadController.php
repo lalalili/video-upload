@@ -5,6 +5,7 @@ namespace Lalalili\VideoUpload\Http\Controllers\UploadCenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
+use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
 use Lalalili\VideoUpload\Services\S3MultipartUploadService;
 use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
@@ -24,7 +25,7 @@ class S3MultipartUploadController
         $session = $this->resolveSessionById((int) $validated['upload_session_id']);
         $this->authorizeSession($session);
 
-        abort_unless($session->status->value === 'created', 422, 'Multipart upload can only be started for sessions in the created state.');
+        abort_unless($this->status($session) === VideoUploadSessionStatus::Created, 422, 'Multipart upload can only be started for sessions in the created state.');
 
         $created = $multipart->create($session);
 
@@ -91,7 +92,7 @@ class S3MultipartUploadController
         $session->update([
             'status' => 'uploaded',
             'completed_at' => now(),
-            'metadata' => array_merge($session->metadata ?? [], ['s3_complete' => $result]),
+            'metadata' => array_merge($this->metadata($session), ['s3_complete' => $result]),
             'bytes_uploaded' => (int) $session->file_size,
         ]);
 
@@ -108,7 +109,7 @@ class S3MultipartUploadController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_unless($session->status->canCancel(), 422, 'This upload session cannot be cancelled.');
+        abort_unless($this->status($session)->canCancel(), 422, 'This upload session cannot be cancelled.');
 
         $multipart->abort($session);
 
@@ -145,6 +146,19 @@ class S3MultipartUploadController
         $sessionClass = $this->sessionModelClass();
 
         return $sessionClass::query()->whereKey($id)->firstOrFail();
+    }
+
+    protected function status(VideoUploadSession $session): VideoUploadSessionStatus
+    {
+        return $session->status;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function metadata(VideoUploadSession $session): array
+    {
+        return is_array($session->metadata) ? $session->metadata : [];
     }
 
     /**

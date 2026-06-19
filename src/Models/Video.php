@@ -5,6 +5,13 @@ namespace Lalalili\VideoUpload\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property array<string, mixed>|null $metadata
+ * @property ?string $provider_video_id
+ * @property string $provider
+ * @property int $status
+ * @property ?string $transcode_status
+ */
 class Video extends Model
 {
     protected $guarded = [];

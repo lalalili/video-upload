@@ -42,7 +42,7 @@ class VideoWebhookService
             'duration' => $this->secondsFromMilliseconds(data_get($payload, 'duration', data_get($payload, 'data.duration'))),
             'thumbnail_url' => $this->thumbnailUrl($provider, $providerVideoId, $payload),
             'player_embed_url' => $this->playerUrl($provider, $providerVideoId, $payload),
-            'metadata' => array_merge($video->metadata ?? [], [
+            'metadata' => array_merge($this->metadata($video), [
                 'webhook' => [
                     'provider' => $provider,
                     'payload' => Arr::except($payload, ['secret']),
@@ -148,5 +148,13 @@ class VideoWebhookService
         }
 
         return (int) ceil(((float) $value) / 1000);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metadata(Video $video): array
+    {
+        return is_array($video->metadata) ? $video->metadata : [];
     }
 }

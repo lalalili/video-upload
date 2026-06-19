@@ -123,7 +123,7 @@ class VideoUploadService
             'duration' => $status->duration,
             'thumbnail_url' => $status->thumbnailUrl,
             'player_embed_url' => $status->playerEmbedUrl,
-            'metadata' => array_merge($video->metadata ?? [], $status->metadata),
+            'metadata' => array_merge($this->metadata($video), $status->metadata),
         ]);
 
         $video->uploadSessions()
@@ -177,6 +177,14 @@ class VideoUploadService
     private function contextInt(array $context, string $key): ?int
     {
         return is_numeric($context[$key] ?? null) ? (int) $context[$key] : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metadata(Video $video): array
+    {
+        return is_array($video->metadata) ? $video->metadata : [];
     }
 
     /**

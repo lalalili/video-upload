@@ -5,6 +5,7 @@ namespace Lalalili\VideoUpload\Http\Controllers\UploadCenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
+use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
 use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
 
@@ -42,8 +43,10 @@ class VideoUploadSessionController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_if($session->status->value === 'cancelled', 422, 'Cancelled upload sessions cannot be completed.');
-        abort_if($session->status->value === 'failed', 422, 'Failed upload sessions must be retried before completing.');
+        $status = $this->status($session);
+
+        abort_if($status === VideoUploadSessionStatus::Cancelled, 422, 'Cancelled upload sessions cannot be completed.');
+        abort_if($status === VideoUploadSessionStatus::Failed, 422, 'Failed upload sessions must be retried before completing.');
 
         $manager->completeUploadSession($session);
 
@@ -55,7 +58,7 @@ class VideoUploadSessionController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_unless($session->status->canUpdateProgress(), 422, 'Progress cannot be updated for this upload session.');
+        abort_unless($this->status($session)->canUpdateProgress(), 422, 'Progress cannot be updated for this upload session.');
 
         $validated = $request->validate([
             'bytes_uploaded' => ['required', 'integer', 'min:0'],
@@ -76,7 +79,7 @@ class VideoUploadSessionController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_unless($session->status->canCancel(), 422, 'This upload session cannot be cancelled.');
+        abort_unless($this->status($session)->canCancel(), 422, 'This upload session cannot be cancelled.');
 
         $session->update([
             'status' => 'cancelled',
@@ -96,7 +99,7 @@ class VideoUploadSessionController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_if($session->status->value === 'ready', 422, 'Completed upload sessions cannot be marked as failed.');
+        abort_if($this->status($session) === VideoUploadSessionStatus::Ready, 422, 'Completed upload sessions cannot be marked as failed.');
 
         $validated = $request->validate([
             'error_message' => ['nullable', 'string', 'max:1000'],
@@ -121,7 +124,7 @@ class VideoUploadSessionController
         $session = $this->resolveSession($request);
         $this->authorizeSession($session);
 
-        abort_unless($session->status->canRetry(), 422, 'This upload session cannot be retried.');
+        abort_unless($this->status($session)->canRetry(), 422, 'This upload session cannot be retried.');
 
         $session->update([
             'status' => 'created',
@@ -158,6 +161,11 @@ class VideoUploadSessionController
         $sessionClass = $this->sessionModelClass();
 
         return $sessionClass::query()->whereKey($request->route($param))->firstOrFail();
+    }
+
+    protected function status(VideoUploadSession $session): VideoUploadSessionStatus
+    {
+        return $session->status;
     }
 
     /**

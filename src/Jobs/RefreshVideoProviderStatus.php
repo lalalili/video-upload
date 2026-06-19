@@ -78,7 +78,7 @@ class RefreshVideoProviderStatus implements ShouldQueue
 
         $transcode = $video->transcode_status;
 
-        if ($transcode !== null && ! in_array($transcode, self::WATCHABLE_TRANSCODE_STATUSES, true)) {
+        if (is_string($transcode) && ! in_array($transcode, self::WATCHABLE_TRANSCODE_STATUSES, true)) {
             return;
         }
 
@@ -141,7 +141,7 @@ class RefreshVideoProviderStatus implements ShouldQueue
                     'status' => 1,
                     'provider_status' => $status->status,
                     'transcode_status' => $status->transcodeStatus ?? 'completed',
-                    'metadata' => array_merge($video->metadata ?? [], $status->metadata),
+                    'metadata' => array_merge($this->metadata($video), $status->metadata),
                 ]);
 
                 $this->syncUploadSessions($video, VideoUploadSessionStatus::Ready);
@@ -153,7 +153,7 @@ class RefreshVideoProviderStatus implements ShouldQueue
             $video->update([
                 'provider_status' => $status->status,
                 'transcode_status' => $status->transcodeStatus ?? $status->status,
-                'metadata' => array_merge($video->metadata ?? [], $status->metadata),
+                'metadata' => array_merge($this->metadata($video), $status->metadata),
             ]);
 
             $this->syncUploadSessions($video, VideoUploadSessionStatus::Processing);
@@ -181,6 +181,14 @@ class RefreshVideoProviderStatus implements ShouldQueue
                 VideoUploadSessionStatus::Processing->value,
             ])
             ->update(array_merge(['status' => $status->value], $attributes));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function metadata(Video $video): array
+    {
+        return is_array($video->metadata) ? $video->metadata : [];
     }
 
     /**

@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 
+/**
+ * @property VideoUploadSessionStatus $status
+ * @property array<string, mixed>|null $metadata
+ */
 class VideoUploadSession extends Model
 {
     use HasUlids;
