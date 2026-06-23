@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Storage;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Models\Video;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
+use Lalalili\VideoUpload\Tests\Fixtures\HostVideoUploadSession;
+use Lalalili\VideoUpload\Tests\Fixtures\HostVideoUploadSessionStatus;
 
 function makeS3User(): User
 {
@@ -59,6 +61,32 @@ it('create starts a multipart upload and sets uploading status', function (): vo
         ->assertJsonPath('session.status', 'uploading');
 
     expect($session->fresh()->status->value)->toBe('uploading');
+});
+
+it('normalizes host app enum status casts before checking multipart create transitions', function (): void {
+    config()->set('video-upload.models.session', HostVideoUploadSession::class);
+
+    $user = makeS3User();
+    $video = Video::create(['title' => 'Host Enum S3 Test', 'provider' => 'cloudflare_stream']);
+    $session = HostVideoUploadSession::create([
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
+        'original_file_name' => 'upload.mp4',
+        'file_size' => 10 * 1024 * 1024,
+        'bytes_uploaded' => 0,
+        'status' => HostVideoUploadSessionStatus::Created,
+        'staging_disk' => '',
+        'staging_path' => 'uploads/test.mp4',
+        'created_by' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('video-upload.upload-center.s3.multipart.create'), [
+            'upload_session_id' => $session->id,
+        ])
+        ->assertOk()
+        ->assertJsonPath('session.status', 'uploading');
 });
 
 it('create returns 422 when session is not in created state', function (): void {

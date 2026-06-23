@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
+use Lalalili\VideoUpload\Support\ResolvesVideoUploadSessionStatus;
 use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
 
 class VideoUploadSessionController
 {
+    use ResolvesVideoUploadSessionStatus;
+
     public function __construct(private readonly VideoUploadSessionPayload $payload) {}
 
     public function index(Request $request): JsonResponse
@@ -161,11 +164,6 @@ class VideoUploadSessionController
         $sessionClass = $this->sessionModelClass();
 
         return $sessionClass::query()->whereKey($request->route($param))->firstOrFail();
-    }
-
-    protected function status(VideoUploadSession $session): VideoUploadSessionStatus
-    {
-        return $session->status;
     }
 
     /**

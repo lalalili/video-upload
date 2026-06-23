@@ -8,10 +8,13 @@ use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Enums\VideoUploadSessionStatus;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
 use Lalalili\VideoUpload\Services\S3MultipartUploadService;
+use Lalalili\VideoUpload\Support\ResolvesVideoUploadSessionStatus;
 use Lalalili\VideoUpload\Support\VideoUploadSessionPayload;
 
 class S3MultipartUploadController
 {
+    use ResolvesVideoUploadSessionStatus;
+
     public function __construct(private readonly VideoUploadSessionPayload $payload) {}
 
     public function create(Request $request, S3MultipartUploadService $multipart): JsonResponse
@@ -146,11 +149,6 @@ class S3MultipartUploadController
         $sessionClass = $this->sessionModelClass();
 
         return $sessionClass::query()->whereKey($id)->firstOrFail();
-    }
-
-    protected function status(VideoUploadSession $session): VideoUploadSessionStatus
-    {
-        return $session->status;
     }
 
     /**

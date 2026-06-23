@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Models\Video;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
+use Lalalili\VideoUpload\Tests\Fixtures\HostVideoUploadSession;
+use Lalalili\VideoUpload\Tests\Fixtures\HostVideoUploadSessionStatus;
 
 function makeTestUser(bool $isSuperAdmin = false): User
 {
@@ -125,6 +127,31 @@ it('progress caps bytes_uploaded at file_size', function (): void {
         ->assertOk();
 
     expect($session->fresh()->bytes_uploaded)->toBe(1024);
+});
+
+it('normalizes host app enum status casts before checking progress transitions', function (): void {
+    config()->set('video-upload.models.session', HostVideoUploadSession::class);
+
+    $user = makeTestUser();
+    $video = Video::create(['title' => 'Host Enum Test', 'provider' => 'cloudflare_stream']);
+    $session = HostVideoUploadSession::create([
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
+        'original_file_name' => 'test.mp4',
+        'file_size' => 1024,
+        'bytes_uploaded' => 0,
+        'status' => HostVideoUploadSessionStatus::Created,
+        'created_by' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->patchJson(route('video-upload.upload-center.videos.progress', $session->id), [
+            'bytes_uploaded' => 512,
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', 'uploading')
+        ->assertJsonPath('progress', 50);
 });
 
 it('progress returns 403 when user does not own session', function (): void {
