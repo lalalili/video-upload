@@ -7,13 +7,14 @@ use Illuminate\Support\Facades\Storage;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Models\Video;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
+
 function makeS3User(): User
 {
-    $user = new User();
+    $user = new User;
     $user->forceFill([
-        'id'             => random_int(1, 999999),
-        'name'           => 'S3 User',
-        'email'          => 's3'.random_int(1, 9999).'@example.com',
+        'id' => random_int(1, 999999),
+        'name' => 'S3 User',
+        'email' => 's3'.random_int(1, 9999).'@example.com',
         'is_super_admin' => false,
     ]);
     $user->save();
@@ -25,16 +26,16 @@ function makeS3Session(array $overrides = []): array
 {
     $video = Video::create(['title' => 'S3 Test', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create(array_merge([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 's3_multipart_then_import',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
         'original_file_name' => 'upload.mp4',
-        'file_size'          => 10 * 1024 * 1024,
-        'bytes_uploaded'     => 0,
-        'status'             => 'created',
-        'staging_disk'       => '',
-        'staging_path'       => 'uploads/test.mp4',
-        'created_by'         => 1,
+        'file_size' => 10 * 1024 * 1024,
+        'bytes_uploaded' => 0,
+        'status' => 'created',
+        'staging_disk' => '',
+        'staging_path' => 'uploads/test.mp4',
+        'created_by' => 1,
     ], $overrides));
 
     return [$video, $session];
@@ -122,19 +123,20 @@ it('abort cancels multipart and transitions session', function (): void {
 it('complete finalises multipart and delegates to manager', function (): void {
     $user = makeS3User();
     [, $session] = makeS3Session([
-        'created_by'          => $user->id,
-        'status'              => 'uploading',
+        'created_by' => $user->id,
+        'status' => 'uploading',
         'multipart_upload_id' => 'mpid-complete',
     ]);
 
     $called = false;
     $this->app->bind(VideoUploadSessionManagerContract::class, function () use (&$called): object {
-        return new class($called) implements VideoUploadSessionManagerContract {
+        return new class($called) implements VideoUploadSessionManagerContract
+        {
             public function __construct(private bool &$called) {}
 
             public function createUploadSession(Request $request): array
             {
-                return ['upload_session' => new VideoUploadSession()];
+                return ['upload_session' => new VideoUploadSession];
             }
 
             public function completeUploadSession(Model $s): void

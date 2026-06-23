@@ -8,9 +8,9 @@ use Lalalili\VideoUpload\Tests\Models\TestCourseUnit;
 it('auto-generates ulid on creation', function (): void {
     $video = Video::create(['title' => 'Test', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 's3_multipart_then_import',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
         'original_file_name' => 'test.mp4',
     ]);
 
@@ -21,13 +21,13 @@ it('auto-generates ulid on creation', function (): void {
 it('stores staging fields', function (): void {
     $video = Video::create(['title' => 'Test', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create([
-        'video_id'              => $video->id,
-        'provider'              => 'cloudflare_stream',
-        'strategy'              => 's3_multipart_then_import',
-        'original_file_name'    => 'test.mp4',
-        'staging_disk'          => 's3-staging',
-        'staging_path'          => 'uploads/test.mp4',
-        'multipart_upload_id'   => 'mpu-123',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
+        'original_file_name' => 'test.mp4',
+        'staging_disk' => 's3-staging',
+        'staging_path' => 'uploads/test.mp4',
+        'multipart_upload_id' => 'mpu-123',
     ]);
 
     expect($session->staging_disk)->toBe('s3-staging')
@@ -38,11 +38,11 @@ it('stores staging fields', function (): void {
 it('casts status to enum', function (): void {
     $video = Video::create(['title' => 'Test', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 's3_multipart_then_import',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
         'original_file_name' => 'test.mp4',
-        'status'             => 'uploading',
+        'status' => 'uploading',
     ]);
 
     expect($session->status)->toBeInstanceOf(VideoUploadSessionStatus::class)
@@ -54,12 +54,12 @@ it('can associate a generic target via morph', function (): void {
     $unit = TestCourseUnit::create([]);
 
     $session = VideoUploadSession::create([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 'provider_direct',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 'provider_direct',
         'original_file_name' => 'lesson.mp4',
-        'target_type'        => TestCourseUnit::class,
-        'target_id'          => $unit->id,
+        'target_type' => TestCourseUnit::class,
+        'target_id' => $unit->id,
     ]);
 
     $loaded = VideoUploadSession::find($session->id);
@@ -71,9 +71,9 @@ it('can associate a generic target via morph', function (): void {
 it('target is nullable when not set', function (): void {
     $video = Video::create(['title' => 'Test', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 'provider_direct',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 'provider_direct',
         'original_file_name' => 'lesson.mp4',
     ]);
 

@@ -6,13 +6,14 @@ use Illuminate\Http\Request;
 use Lalalili\VideoUpload\Contracts\VideoUploadSessionManagerContract;
 use Lalalili\VideoUpload\Models\Video;
 use Lalalili\VideoUpload\Models\VideoUploadSession;
+
 function makeTestUser(bool $isSuperAdmin = false): User
 {
-    $user = new User();
+    $user = new User;
     $user->forceFill([
-        'id'             => random_int(1, 999999),
-        'name'           => 'Test User',
-        'email'          => 'test'.random_int(1, 9999).'@example.com',
+        'id' => random_int(1, 999999),
+        'name' => 'Test User',
+        'email' => 'test'.random_int(1, 9999).'@example.com',
         'is_super_admin' => $isSuperAdmin,
     ]);
     $user->save();
@@ -25,14 +26,14 @@ function makeVideoAndSession(array $sessionOverrides = []): array
     $video = Video::create(['title' => 'Test', 'provider' => 'cloudflare_stream']);
 
     $session = VideoUploadSession::create(array_merge([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 's3_multipart_then_import',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
         'original_file_name' => 'test.mp4',
-        'file_size'          => 1024 * 1024,
-        'bytes_uploaded'     => 0,
-        'status'             => 'created',
-        'created_by'         => 1,
+        'file_size' => 1024 * 1024,
+        'bytes_uploaded' => 0,
+        'status' => 'created',
+        'created_by' => 1,
     ], $sessionOverrides));
 
     return [$video, $session];
@@ -67,17 +68,18 @@ it('store delegates to manager and returns 201', function (): void {
     $user = makeTestUser();
     $video = Video::create(['title' => 'Stored', 'provider' => 'cloudflare_stream']);
     $session = VideoUploadSession::create([
-        'video_id'           => $video->id,
-        'provider'           => 'cloudflare_stream',
-        'strategy'           => 's3_multipart_then_import',
+        'video_id' => $video->id,
+        'provider' => 'cloudflare_stream',
+        'strategy' => 's3_multipart_then_import',
         'original_file_name' => 'stored.mp4',
-        'file_size'          => 512,
-        'created_by'         => $user->id,
-        'status'             => 'created',
+        'file_size' => 512,
+        'created_by' => $user->id,
+        'status' => 'created',
     ]);
 
     $this->app->bind(VideoUploadSessionManagerContract::class, function () use ($session): object {
-        return new class($session) implements VideoUploadSessionManagerContract {
+        return new class($session) implements VideoUploadSessionManagerContract
+        {
             public function __construct(private readonly VideoUploadSession $session) {}
 
             public function createUploadSession(Request $request): array
@@ -174,10 +176,10 @@ it('fail marks session as failed with error message', function (): void {
 it('retry resets failed session back to created', function (): void {
     $user = makeTestUser();
     [$video, $session] = makeVideoAndSession([
-        'created_by'     => $user->id,
-        'status'         => 'failed',
+        'created_by' => $user->id,
+        'status' => 'failed',
         'bytes_uploaded' => 500,
-        'error_message'  => 'old error',
+        'error_message' => 'old error',
     ]);
 
     $response = $this->actingAs($user)
@@ -197,12 +199,13 @@ it('complete delegates to manager', function (): void {
 
     $called = false;
     $this->app->bind(VideoUploadSessionManagerContract::class, function () use (&$called): object {
-        return new class($called) implements VideoUploadSessionManagerContract {
+        return new class($called) implements VideoUploadSessionManagerContract
+        {
             public function __construct(private bool &$called) {}
 
             public function createUploadSession(Request $request): array
             {
-                return ['upload_session' => new VideoUploadSession()];
+                return ['upload_session' => new VideoUploadSession];
             }
 
             public function completeUploadSession(Model $session): void

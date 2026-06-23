@@ -27,10 +27,15 @@ class RefreshVideoProviderStatus implements ShouldQueue
 
     private const SINGLE_VIDEO_BACKOFF_SECONDS = [60, 120, 300, 300, 300];
 
-    public function __construct(
-        public readonly ?int $videoId = null,
-        public readonly int $attempt = 0,
-    ) {}
+    public ?int $videoId = null;
+
+    public int $attempt = 0;
+
+    public function __construct(?int $videoId = null, int $attempt = 0)
+    {
+        $this->videoId = $videoId;
+        $this->attempt = $attempt;
+    }
 
     public function handle(CourseVideoPlatformManager $platforms): void
     {
