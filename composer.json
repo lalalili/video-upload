@@ -39,10 +39,6 @@
                     "lalalili/course-core": "0.4.1"
                 }
             }
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/lalalili/course-core.git"
         }
     ],
     "extra": {

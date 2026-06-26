@@ -32,6 +32,14 @@ jobs:
         php: ['8.3', '8.4']
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: video-upload
+
+      - name: Checkout course-core (sibling path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: lalalili/course-core
+          path: course-core
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -40,10 +48,13 @@ jobs:
           coverage: none
 
       - name: Install dependencies
+        working-directory: video-upload
         run: composer update --prefer-dist --no-interaction --no-progress
 
       - name: Tests
+        working-directory: video-upload
         run: composer test
 
       - name: Static analysis
+        working-directory: video-upload
         run: composer analyse
